@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gensokyo.Yukari", "Gensokyo.Yukari\Gensokyo.Yukari.csproj", "{998F411C-8101-4BAC-8FDA-4884FB34B64A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gensokyo.Ran", "Gensokyo.Ran\Gensokyo.Ran.csproj", "{35758DD9-E1CC-4CC6-A147-55458804272A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{998F411C-8101-4BAC-8FDA-4884FB34B64A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{998F411C-8101-4BAC-8FDA-4884FB34B64A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{998F411C-8101-4BAC-8FDA-4884FB34B64A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{998F411C-8101-4BAC-8FDA-4884FB34B64A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35758DD9-E1CC-4CC6-A147-55458804272A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35758DD9-E1CC-4CC6-A147-55458804272A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35758DD9-E1CC-4CC6-A147-55458804272A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35758DD9-E1CC-4CC6-A147-55458804272A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
