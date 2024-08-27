@@ -1,4 +1,7 @@
 using System.Net.WebSockets;
+using System.Text;
+using System.Text.Json;
+using Gensokyo.Yakumo.Models;
 
 namespace Gensokyo.Yukari.Services;
 
@@ -9,12 +12,21 @@ public class WorkerManager : IDisposable, IAsyncDisposable
         public byte[] Buffer { get; set; } = new byte[8 * 1024];
         public WebSocket WebSocket { get; set; }
         public DateTimeOffset LastHeartbeat { get; set; }
+
+        public async Task SendAsync(object toSend)
+        {
+            var json = JsonSerializer.Serialize(toSend);
+            var bytes = Encoding.UTF8.GetBytes(json);
+            var buffer = new ArraySegment<byte>(bytes);
+            await WebSocket.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None);
+        }
     }
     
     private readonly Timer _timer;
     private readonly IHostApplicationLifetime _lifetime;
     private List<WebSocketSession> _sessions = new();
     private Dictionary<string, WebSocketSession> _clientToSession = new();
+    private ulong _jobId = 0;
 
     public WorkerManager(IHostApplicationLifetime lifetime)
     {
@@ -26,15 +38,24 @@ public class WorkerManager : IDisposable, IAsyncDisposable
     {
         var now = DateTimeOffset.UtcNow;
         
-        foreach (var (id, session) in _clientToSession)
+        var toRemove = new List<WebSocketSession>();
+        
+        foreach (var session in _sessions)
         {
             if (now - session.LastHeartbeat > TimeSpan.FromSeconds(120))
             {
-                _clientToSession.Remove(id);
+                session.WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "No heartbeat received", _lifetime.ApplicationStopping);
+                toRemove.Add(session);
             }
             else if (now - session.LastHeartbeat > TimeSpan.FromSeconds(30))
             {
-                // Send a heartbeat message
+                _ = session.SendAsync(new JobRequest
+                {
+                    JobId = Interlocked.Increment(ref _jobId).ToString(),
+                    JobName = "heartbeat",
+                    JobData = JsonSerializer.Serialize(new Heartbeat { Timestamp = now }),
+                    ClientName = "yukari"
+                });
             }
         }
     }

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Text.Json;
 using Gensokyo.Yakumo.Models;
@@ -112,5 +113,75 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
     private void OnReceiveJobRequest(JobRequest job)
     {
         logger.LogInformation("Received job request: {JobName}", job.JobName);
+
+        var jobConfigExists = config.Jobs.TryGetValue(job.JobName, out var jobConfig);
+
+        if (!jobConfigExists || jobConfig == null)
+        {
+            logger.LogWarning("Job {JobName} not found in configuration", job.JobName);
+            _client?.Send(JsonSerializer.Serialize(new JobResponse
+            {
+                JobId = job.JobId,
+                Success = false,
+                Async = false,
+                Result = "Job not found"
+            }));
+            
+            return;
+        }
+
+        if (jobConfig.AllowedClients != null && !jobConfig.AllowedClients.Contains(job.ClientName))
+        {
+            logger.LogWarning("Client {ClientName} not allowed to run job {JobName}", job.ClientName, job.JobName);
+            _client?.Send(JsonSerializer.Serialize(new JobResponse
+            {
+                JobId = job.JobId,
+                Success = false,
+                Async = false,
+                Result = "Client not allowed"
+            }));
+        }
+        
+        // Start process
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = jobConfig.Executable,
+                Arguments = jobConfig.Arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = false,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            }
+        };
+
+        process.Start();
+
+        if (jobConfig.Async)
+        {
+            _client?.Send(JsonSerializer.Serialize(new JobResponse
+            {
+                JobId = job.JobId,
+                Success = true,
+                Async = true
+            }));
+            
+            process.Exited += (_, _) => process.Dispose();
+        }
+        else
+        {
+            process.WaitForExit(jobConfig.Timeout);
+            
+            _client?.Send(JsonSerializer.Serialize(new JobResponse
+            {
+                JobId = job.JobId,
+                Success = process.ExitCode == 0,
+                Async = false,
+                Result = process.StandardOutput.ReadToEnd()
+            }));
+            
+            process.Dispose();
+        }
     }
 }
