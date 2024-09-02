@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Gensokyo.Yakumo.Models;
 using Websocket.Client;
 
@@ -17,13 +18,16 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
         _client.ReconnectTimeout = TimeSpan.FromSeconds(config.ReconnectTimeout);
         _client.ReconnectionHappened.Subscribe(info =>
         {
-            logger.LogInformation("Reconnection to Gensokyo occurred: {ReconnectionType}", info.Type);
+            logger.LogInformation("Connection to Gensokyo occurred: {ReconnectionType}", info.Type);
         });
 
         _client.MessageReceived.Subscribe(OnReceive);
-
+        
+        logger.LogInformation("Worker started at: {Time}", DateTimeOffset.UtcNow);
         await _client.Start();
+        Connect();
         await stoppingToken;
+        logger.LogInformation("Worker stopping at: {Time}", DateTimeOffset.UtcNow);
 
         if (_client.IsStarted)
         {
@@ -31,6 +35,16 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
         }
 
         _client.Dispose();
+    }
+
+    private void Connect()
+    {
+        _client?.Send(JsonSerializer.Serialize(new ConnectionRequest
+        {
+            ClientSecret = config.ClientSecret,
+            FriendlyName = Environment.MachineName,
+            JobsAvailable = config.Jobs.Keys.ToArray()
+        }));
     }
     
     private void OnReceive(ResponseMessage message)
@@ -148,7 +162,7 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
             StartInfo = new ProcessStartInfo
             {
                 FileName = jobConfig.Executable,
-                Arguments = jobConfig.Arguments,
+                Arguments = jobConfig.Arguments ?? "",
                 RedirectStandardOutput = true,
                 RedirectStandardError = false,
                 UseShellExecute = false,
