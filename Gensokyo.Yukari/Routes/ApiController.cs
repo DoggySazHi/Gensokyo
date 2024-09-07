@@ -25,6 +25,6 @@ public class ApiController(YukariConfig config, WorkerManager manager) : Control
             return;
         }
         
-        // Check if we have a job registered with the given name
+        manager.SendJob(job.JobName, job.JobData, auth.Name);
     }
 }

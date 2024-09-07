@@ -20,6 +20,11 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
         {
             logger.LogInformation("Connection to Gensokyo occurred: {ReconnectionType}", info.Type);
         });
+        
+        _client.DisconnectionHappened.Subscribe(info =>
+        {
+            logger.LogInformation("Disconnection from Gensokyo occurred: {CloseStatus} {CloseStatusDescription}", info.CloseStatus, info.CloseStatusDescription);
+        });
 
         _client.MessageReceived.Subscribe(OnReceive);
         
@@ -73,6 +78,11 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
                     break;
                 case "job_request":
                     OnReceiveJobRequest(job);
+                    break;
+                case "close":
+                    _client?.Stop(WebSocketCloseStatus.NormalClosure, "Server requested close.");
+                    logger.LogInformation("Server requested close, stopping worker");
+                    host.StopApplication();
                     break;
                 default:
                     _client?.Stop(WebSocketCloseStatus.InvalidMessageType, "Unsupported message type.");

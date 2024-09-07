@@ -7,7 +7,8 @@ public enum ConnectionReason
     Success,
     InvalidKey,
     InvalidName,
-    InvalidJobs
+    InvalidJobs,
+    InvalidPayload
 }
 
 public class ConnectionRequest
@@ -21,4 +22,10 @@ public class ConnectionResponse
 {
     [JsonPropertyName("success")] public bool Success { get; set; }
     [JsonPropertyName("reason")] public ConnectionReason Reason { get; set; }
+
+    public ConnectionResponse(bool success, ConnectionReason reason)
+    {
+        Success = success;
+        Reason = reason;
+    }
 }
