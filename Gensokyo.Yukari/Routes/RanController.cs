@@ -12,7 +12,7 @@ public class RanController(WorkerManager manager, ILogger<RanController> logger)
         if (HttpContext.WebSockets.IsWebSocketRequest)
         {
             var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-            var socketTask = new TaskCompletionSource<object>();
+            var socketTask = new TaskCompletionSource();
             manager.AddWebSocket(webSocket, socketTask);
             logger.LogInformation("WebSocket connection established with {RemoteAddress}", HttpContext.Connection.RemoteIpAddress);
             await socketTask.Task;

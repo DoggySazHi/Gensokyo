@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Gensokyo.Yakumo.Models;
 using Websocket.Client;
 

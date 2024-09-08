@@ -19,9 +19,9 @@ public class RanConfig
 
 public class RanJob
 {
-    [JsonPropertyName("executable")] public string Executable { get; set; } = null!;
-    [JsonPropertyName("arguments")] public string? Arguments { get; set; }
-    [JsonPropertyName("timeout")] public int Timeout { get; set; } = 60;
-    [JsonPropertyName("async")] public bool Async { get; set; } = false;
-    [JsonPropertyName("allowed_clients")] public string[]? AllowedClients { get; set; }
+    [JsonPropertyName("executable")] public string Executable { get; init; } = null!;
+    [JsonPropertyName("arguments")] public string? Arguments { get; init; }
+    [JsonPropertyName("timeout")] public int Timeout { get; init; } = 60;
+    [JsonPropertyName("async")] public bool Async { get; init; } = false;
+    [JsonPropertyName("allowed_clients")] public string[]? AllowedClients { get; }
 }

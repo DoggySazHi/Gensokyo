@@ -11,7 +11,7 @@ public class Heartbeat
     /// Written by Yukari to Ran.
     /// </summary>
     [JsonPropertyName("timestamp")]
-    public DateTimeOffset Timestamp { get; set; }
+    public DateTimeOffset Timestamp { get; init; }
     
     /// <summary>
     /// Written back by Ran to acknowledge.

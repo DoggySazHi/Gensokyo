@@ -8,13 +8,13 @@ namespace Gensokyo.Yukari.Routes;
 public class ApiController(YukariConfig config, WorkerManager manager) : ControllerBase
 {
     [HttpPost("/api")]
-    public async Task Post([FromBody] ApiJobRequest job)
+    public async Task<ApiJobResponse> Post([FromBody] ApiJobRequest job)
     {
         // Check Bearer token
         if (!HttpContext.Request.Headers.TryGetValue("Authorization", out var authHeader) || !authHeader.ToString().StartsWith("Bearer "))
         {
             HttpContext.Response.StatusCode = 401;
-            return;
+            return new ApiJobResponse(false, "Unauthorized");
         }
 
         var authFound = config.AccessTokens.TryGetValue(authHeader.ToString()[7..], out var auth);
@@ -22,9 +22,9 @@ public class ApiController(YukariConfig config, WorkerManager manager) : Control
         if (!authFound || auth == null)
         {
             HttpContext.Response.StatusCode = 403;
-            return;
+            return new ApiJobResponse(false, "Forbidden");
         }
         
-        manager.SendJob(job.JobName, job.JobData, auth.Name);
+        return await manager.SendJob(job.JobName, job.JobData, auth.Name);
     }
 }

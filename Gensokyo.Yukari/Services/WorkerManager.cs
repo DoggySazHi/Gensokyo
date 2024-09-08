@@ -2,6 +2,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using Gensokyo.Yakumo.Models;
+using Gensokyo.Yukari.Models;
 
 namespace Gensokyo.Yukari.Services;
 
@@ -11,11 +12,11 @@ public class WorkerManager : IDisposable, IAsyncDisposable
     {
         public byte[] Buffer { get; } = new byte[8 * 1024];
         public WebSocket WebSocket { get; }
-        public TaskCompletionSource<object> WebSocketTask { get; }
+        public TaskCompletionSource WebSocketTask { get; }
         public DateTimeOffset LastHeartbeat { get; set; }
         public string[] Jobs { get; set; } = [];
         
-        public WebSocketSession(WebSocket webSocket, TaskCompletionSource<object> socketTask)
+        public WebSocketSession(WebSocket webSocket, TaskCompletionSource socketTask)
         {
             WebSocket = webSocket;
             WebSocketTask = socketTask;
@@ -33,13 +34,14 @@ public class WorkerManager : IDisposable, IAsyncDisposable
         public async Task CloseAsync(WebSocketCloseStatus status, string? description, CancellationToken token)
         {
             await WebSocket.CloseAsync(status, description, token);
-            WebSocketTask.SetResult(new object());
+            WebSocketTask.SetResult();
         }
     }
     
     private readonly Timer _timer;
     private readonly IHostApplicationLifetime _lifetime;
     private readonly List<WebSocketSession> _sessions = [];
+    private readonly Dictionary<string, TaskCompletionSource<JobResponse>> _jobTasks = new();
     private readonly ILogger<WorkerManager> _logger;
     private readonly YukariConfig _config;
     private ulong _jobId;
@@ -92,7 +94,7 @@ public class WorkerManager : IDisposable, IAsyncDisposable
         }
     }
     
-    public void AddWebSocket(WebSocket webSocket, TaskCompletionSource<object> socketTask)
+    public void AddWebSocket(WebSocket webSocket, TaskCompletionSource socketTask)
     {
         var session = new WebSocketSession(webSocket, socketTask);
         
@@ -101,22 +103,33 @@ public class WorkerManager : IDisposable, IAsyncDisposable
         Task.Run(async () => await SocketEventHandler(session));
     }
     
-    public async Task SendJob(string jobName, string jobData, string clientName)
+    public async Task<ApiJobResponse> SendJob(string jobName, string jobData, string clientName)
     {
-        foreach (var session in _sessions)
+        var session = _sessions.FirstOrDefault(o => o.Jobs.Contains(jobName));
+        
+        if (session == null)
         {
-            if (session.Jobs.Contains(jobName))
-            {
-                await session.SendAsync(CreateJobRequest("job_request", new JobRequest
-                {
-                    JobId = Interlocked.Increment(ref _jobId).ToString(),
-                    JobName = jobName,
-                    JobData = jobData,
-                    ClientName = clientName
-                }));
-                break;
-            }
+            return new ApiJobResponse(false, "No worker available");
         }
+
+        var jobId = Interlocked.Increment(ref _jobId).ToString();
+        
+        await session.SendAsync(CreateJobRequest("job_request", new JobRequest
+        {
+            JobId = jobId,
+            JobName = jobName,
+            JobData = jobData,
+            ClientName = clientName
+        }));
+        
+        var task = new TaskCompletionSource<JobResponse>();
+        _jobTasks[jobId] = task;
+        
+        var response = await task.Task;
+        
+        _jobTasks.Remove(jobId);
+        
+        return new ApiJobResponse(response.Success, response.Result);
     }
 
     private async Task SocketEventHandler(WebSocketSession session)
@@ -153,6 +166,22 @@ public class WorkerManager : IDisposable, IAsyncDisposable
         {
             await session.SendAsync(CreateJobRequest("connection_response", new ConnectionResponse(false, ConnectionReason.InvalidJobs)));
             await session.CloseAsync(WebSocketCloseStatus.PolicyViolation, "No jobs available", _lifetime.ApplicationStopping);
+            _sessions.Remove(session);
+            return;
+        }
+        
+        if (connectionRequest.JobsAvailable.Contains("connection_response") || connectionRequest.JobsAvailable.Contains("heartbeat"))
+        {
+            await session.SendAsync(CreateJobRequest("connection_response", new ConnectionResponse(false, ConnectionReason.InvalidJobs)));
+            await session.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Invalid job name", _lifetime.ApplicationStopping);
+            _sessions.Remove(session);
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(connectionRequest.FriendlyName) || connectionRequest.FriendlyName == "yukari")
+        {
+            await session.SendAsync(CreateJobRequest("connection_response", new ConnectionResponse(false, ConnectionReason.InvalidName)));
+            await session.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Invalid friendly name", _lifetime.ApplicationStopping);
             _sessions.Remove(session);
             return;
         }
@@ -195,6 +224,11 @@ public class WorkerManager : IDisposable, IAsyncDisposable
                     {
                         _logger.LogInformation("Received job response: {JobId} {Success} {Async}", jobResponse.JobId, jobResponse.Success, jobResponse.Async);
                         _logger.LogDebug("Result: {Result}", jobResponse.Result);
+
+                        if (_jobTasks.TryGetValue(jobResponse.JobId, out var task))
+                        {
+                            task.SetResult(jobResponse);
+                        }
                     }
                 }
                 catch (Exception)
