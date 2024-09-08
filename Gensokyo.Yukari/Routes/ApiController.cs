@@ -7,6 +7,12 @@ namespace Gensokyo.Yukari.Routes;
 [ApiController]
 public class ApiController(YukariConfig config, WorkerManager manager) : ControllerBase
 {
+    [HttpGet("/")]
+    public string Get()
+    {
+        return "Welcome to Gensokyo! Please watch warmly until it is ready.";
+    }
+    
     [HttpPost("/api")]
     public async Task<ApiJobResponse> Post([FromBody] ApiJobRequest job)
     {

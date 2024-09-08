@@ -133,9 +133,11 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
         }));
     }
     
-    private void OnReceiveJobRequest(JobRequest job)
+    private void OnReceiveJobRequest(JobRequest request)
     {
-        logger.LogInformation("Received job request: {JobName}", job.JobName);
+        var job = JsonSerializer.Deserialize<JobRequest>(request.JobData);
+        
+        logger.LogInformation("Received job request: {JobName}", job!.JobName);
 
         var jobConfigExists = config.Jobs.TryGetValue(job.JobName, out var jobConfig);
 

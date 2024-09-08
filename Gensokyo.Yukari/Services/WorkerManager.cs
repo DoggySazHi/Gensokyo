@@ -79,12 +79,14 @@ public class WorkerManager : IDisposable, IAsyncDisposable
             }
             else if (now - session.LastHeartbeat > TimeSpan.FromSeconds(120))
             {
-                session.CloseAsync(WebSocketCloseStatus.NormalClosure, "No heartbeat received", _lifetime.ApplicationStopping).RunSynchronously();
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                session.CloseAsync(WebSocketCloseStatus.NormalClosure, "No heartbeat received", _lifetime.ApplicationStopping);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 toRemove.Add(session);
             }
             else if (now - session.LastHeartbeat > TimeSpan.FromSeconds(30))
             {
-                _ = session.SendAsync(CreateJobRequest("heartbeat", new Heartbeat { Timestamp = now }));
+                _ = session.SendAsync(CreateJobRequest("heartbeat", new Heartbeat { Timestamp = now }, "heartbeat"));
             }
         }
         
@@ -141,7 +143,7 @@ public class WorkerManager : IDisposable, IAsyncDisposable
 
         try
         {
-            connectionRequest = JsonSerializer.Deserialize<ConnectionRequest>(Encoding.UTF8.GetString(receiveBuffer.Array!));
+            connectionRequest = JsonSerializer.Deserialize<ConnectionRequest>(Encoding.UTF8.GetString(receiveBuffer.Array!.AsSpan(0, receiveResult.Count)));
         } catch (Exception) { /* ignored */ }
         
         if (connectionRequest == null)
@@ -196,7 +198,7 @@ public class WorkerManager : IDisposable, IAsyncDisposable
         {
             if (receiveResult.MessageType == WebSocketMessageType.Text)
             {
-                var message = Encoding.UTF8.GetString(receiveBuffer.Array!);
+                var message = Encoding.UTF8.GetString(receiveBuffer.Array!.AsSpan(0, receiveResult.Count));
 
                 try
                 {
