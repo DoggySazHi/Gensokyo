@@ -8,6 +8,7 @@ public static class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+        builder.Services.AddSingleton(YukariConfig.Load());
         builder.Services.AddSingleton<WorkerManager>();
         builder.Services.AddControllers();
         builder.Services.AddLogging();
