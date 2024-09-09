@@ -15,4 +15,12 @@
       <ProjectReference Include="..\Gensokyo.Yakumo\Gensokyo.Yakumo.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="Properties\PublishProfiles\FolderProfile.pubxml">
+        <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </None>
+    </ItemGroup>
+
 </Project>
