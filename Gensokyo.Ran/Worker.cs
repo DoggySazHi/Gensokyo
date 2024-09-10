@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net.WebSockets;
+using System.Text;
 using System.Text.Json;
 using Gensokyo.Yakumo.Models;
 using Websocket.Client;
@@ -175,9 +176,27 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
                 FileName = jobConfig.Executable,
                 Arguments = jobConfig.Arguments ?? "",
                 RedirectStandardOutput = true,
-                RedirectStandardError = false,
+                RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
+            }
+        };
+        
+        var stringBuilder = new StringBuilder();
+        
+        process.OutputDataReceived += (_, args) =>
+        {
+            if (args.Data != null)
+            {
+                stringBuilder.AppendLine(args.Data);
+            }
+        };
+        
+        process.ErrorDataReceived += (_, args) =>
+        {
+            if (args.Data != null)
+            {
+                stringBuilder.AppendLine(args.Data);
             }
         };
 
@@ -198,12 +217,18 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
         {
             process.WaitForExit(jobConfig.Timeout);
             
+            // Timeout passed, stop process
+            if (!process.HasExited)
+            {
+                process.Kill();
+            }
+            
             _client?.Send(JsonSerializer.Serialize(new JobResponse
             {
                 JobId = job.JobId,
                 Success = process.ExitCode == 0,
                 Async = false,
-                Result = process.StandardOutput.ReadToEnd()
+                Result = stringBuilder.ToString()
             }));
             
             process.Dispose();
