@@ -189,6 +189,7 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
             if (args.Data != null)
             {
                 stringBuilder.AppendLine(args.Data);
+                logger.LogInformation("{Message}", args.Data);
             }
         };
         
@@ -197,10 +198,13 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
             if (args.Data != null)
             {
                 stringBuilder.AppendLine(args.Data);
+                logger.LogError("{Message}", args.Data);
             }
         };
 
         process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
 
         if (jobConfig.Async)
         {
