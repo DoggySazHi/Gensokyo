@@ -19,6 +19,7 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
         _client.ReconnectionHappened.Subscribe(info =>
         {
             logger.LogInformation("Connection to Gensokyo occurred: {ReconnectionType}", info.Type);
+            Connect();
         });
         
         _client.DisconnectionHappened.Subscribe(info =>
@@ -30,7 +31,6 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
         
         logger.LogInformation("Worker started at: {Time}", DateTimeOffset.UtcNow);
         await _client.Start();
-        Connect();
         await stoppingToken;
         logger.LogInformation("Worker stopping at: {Time}", DateTimeOffset.UtcNow);
 
