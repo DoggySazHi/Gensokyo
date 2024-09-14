@@ -178,7 +178,14 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
+                EnvironmentVariables =
+                {
+                    ["GENSOKYO_JOB_ID"] = job.JobId,
+                    ["GENSOKYO_JOB_NAME"] = job.JobName,
+                    ["GENSOKYO_CLIENT_NAME"] = job.ClientName,
+                    ["GENSOKYO_JOB_DATA"] = job.JobData
+                }
             }
         };
         
@@ -189,7 +196,10 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
             if (args.Data != null)
             {
                 stringBuilder.AppendLine(args.Data);
-                logger.LogInformation("{Message}", args.Data);
+                if (config.LogExecution)
+                {
+                    logger.LogInformation("{Message}", args.Data);
+                }
             }
         };
         
@@ -198,7 +208,10 @@ public class Worker(ILogger<Worker> logger, RanConfig config, IHostApplicationLi
             if (args.Data != null)
             {
                 stringBuilder.AppendLine(args.Data);
-                logger.LogError("{Message}", args.Data);
+                if (config.LogExecution)
+                {
+                    logger.LogError("{Message}", args.Data);
+                }
             }
         };
 

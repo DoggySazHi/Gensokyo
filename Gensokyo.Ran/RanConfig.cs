@@ -8,6 +8,7 @@ public class RanConfig
     [JsonPropertyName("gensokyo_url")] public string GensokyoUrl { get; init; } = "ws://gensokyo.williamle.com/ran";
     [JsonPropertyName("reconnect_timeout")] public int ReconnectTimeout { get; init; } = 60;
     [JsonPropertyName("client_secret")] public string ClientSecret { get; init; } = null!;
+    [JsonPropertyName("log_execution")] public bool LogExecution { get; init; } = true;
     
     [JsonPropertyName("jobs")] public Dictionary<string, RanJob> Jobs { get; init; } = new();
     
