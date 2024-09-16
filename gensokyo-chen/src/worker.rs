@@ -1,15 +1,16 @@
 use futures_util::{SinkExt, StreamExt};
-use futures_util::stream::SplitSink;
+use futures_util::stream::{SplitSink, SplitStream};
 use tokio_tungstenite::{connect_async, MaybeTlsStream};
 use log::{error, info};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
-use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Normal;
+use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::*;
 use crate::chen_config::ChenConfig;
 
 type Socket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>>;
 type SocketTx<'a> = SplitSink<&'a mut Socket, Message>;
+type SocketRx<'a> = SplitStream<&'a mut Socket>;
 
 pub struct Worker {
     config: ChenConfig,
@@ -69,10 +70,10 @@ impl Worker {
         }
     }
 
-    async fn close_socket(tx: &mut SocketTx<'_>, close_code: CloseCode, message: &str) {
+    async fn close_socket(tx: &mut SocketTx<'_>, close_code: CloseCode, message: &'static str) {
         if let Err(something) = tx.send(Message::Close(Some(CloseFrame {
             code: close_code,
-            reason: std::borrow::Cow::Borrowed(message),
+            reason: message.into(),
         }))).await {
             error!("Failed to close WebSocket: {:?}", something);
         }
