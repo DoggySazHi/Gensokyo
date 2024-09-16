@@ -6,7 +6,9 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
 use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::*;
+use gethostname::gethostname;
 use crate::chen_config::ChenConfig;
+use crate::models;
 
 type Socket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>>;
 type SocketTx<'a> = SplitSink<&'a mut Socket, Message>;
@@ -17,7 +19,7 @@ pub struct Worker {
 }
 
 impl Worker {
-    pub(crate) fn new(config: ChenConfig) -> Worker {
+    pub fn new(config: ChenConfig) -> Worker {
         Worker {
             config,
         }
@@ -40,13 +42,27 @@ impl Worker {
 
         let (mut tx, mut rx) = socket.split();
 
-        Self::send_message(&mut tx, "Hello, Gensokyo!").await;
+        Self::send_connection_request(&mut tx, config).await;
 
         loop {
             // Read from the WebSocket
             match rx.next().await {
                 Some(Ok(msg)) => {
                     info!("Received message: {:?}", msg);
+
+                    match msg {
+                        Message::Text(message) => {
+                            Self::on_receive_message(&mut tx, &mut rx, &message, config).await;
+                        }
+                        Message::Close(reason) => {
+                            info!("WebSocket closed by server with reason: {:?}", reason);
+                            break;
+                        }
+                        _ => {
+                            error!("Received unsupported message type.");
+                            break;
+                        }
+                    }
                 }
                 Some(Err(e)) => {
                     error!("Failed to receive message: {:?}", e);
@@ -62,6 +78,34 @@ impl Worker {
         info!("Worker stopping at: {}", chrono::Utc::now());
 
         Self::close_socket(&mut tx, Normal, "Worker stopped.").await;
+    }
+
+    async fn on_receive_message(tx: &mut SocketTx<'_>, rx: &mut SocketRx<'_>, message: &str, config: &ChenConfig) {
+        let request: models::JobRequest = serde_json::from_str(&message).unwrap();
+        let job = &config.jobs[&request.job_name];
+
+        let response = models::JobResponse {
+            job_id: request.job_id,
+            success: false,
+            is_async: job.is_async,
+            result: None,
+        };
+
+        let response_message = serde_json::to_string(&response).unwrap();
+
+        Self::send_message(tx, &response_message).await;
+    }
+
+    async fn send_connection_request(tx: &mut SocketTx<'_>, config: &ChenConfig) {
+        let request = models::ConnectionRequest {
+            client_secret: Some(config.client_secret.clone()),
+            friendly_name: Some(gethostname().into_string().unwrap()),
+            jobs_available: Some(config.jobs.keys().cloned().collect()),
+        };
+
+        let message = serde_json::to_string(&request).unwrap();
+
+        Self::send_message(tx, &message).await;
     }
 
     async fn send_message(tx: &mut SocketTx<'_>, message: &str) {

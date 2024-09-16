@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-enum ConnectionReason {
+pub enum ConnectionReason {
     Success,
     InvalidKey,
     InvalidName,
@@ -10,37 +10,37 @@ enum ConnectionReason {
 }
 
 #[derive(Serialize, Deserialize)]
-struct ConnectionRequest {
-    client_secret: Option<String>,
-    friendly_name: Option<String>,
-    jobs_available: Option<Vec<String>>,
+pub struct ConnectionRequest {
+    pub client_secret: Option<String>,
+    pub friendly_name: Option<String>,
+    pub jobs_available: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize)]
-struct ConnectionResponse {
-    success: bool,
-    reason: ConnectionReason,
+pub struct ConnectionResponse {
+    pub success: bool,
+    pub reason: ConnectionReason,
 }
 
 #[derive(Serialize, Deserialize)]
-struct Heartbeat {
-    timestamp: String,
-    acknowledged: Option<String>,
+pub struct Heartbeat {
+    pub timestamp: String,
+    pub acknowledged: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
-struct JobRequest {
-    job_id: String,
-    job_name: String,
-    job_data: String,
-    client_name: String,
+pub struct JobRequest {
+    pub job_id: String,
+    pub job_name: String,
+    pub job_data: String,
+    pub client_name: String,
 }
 
 #[derive(Serialize, Deserialize)]
-struct JobResponse {
-    job_id: String,
-    success: bool,
+pub struct JobResponse {
+    pub job_id: String,
+    pub success: bool,
     #[serde(rename = "async")]
-    is_async: bool,
-    result: Option<String>,
+    pub is_async: bool,
+    pub result: Option<String>,
 }
