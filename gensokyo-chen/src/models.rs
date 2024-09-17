@@ -9,6 +9,18 @@ pub enum ConnectionReason {
     InvalidPayload,
 }
 
+impl ConnectionReason {
+    pub fn to_string(&self) -> &'static str {
+        match self {
+            ConnectionReason::Success => "Success",
+            ConnectionReason::InvalidKey => "InvalidKey",
+            ConnectionReason::InvalidName => "InvalidName",
+            ConnectionReason::InvalidJobs => "InvalidJobs",
+            ConnectionReason::InvalidPayload => "InvalidPayload",
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct ConnectionRequest {
     pub client_secret: Option<String>,
